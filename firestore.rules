@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Profiles are administered in Firebase Console or by a trusted Admin SDK.
+    // Browser users may read their own profile, but cannot promote themselves.
+    match /users/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+  }
+}

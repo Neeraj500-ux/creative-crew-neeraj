@@ -1,0 +1,13 @@
+creative-crew CREATIVE WORKSPACE
+
+Extract ZIP. Open creative-adhyayan folder in VS Code.
+Open terminal where package.json is located.
+
+npm install
+npm run dev
+
+Open the localhost URL and sign in with your Firebase email/password.
+Read ROLE-LOGIN-SETUP.md first for the corrected Firebase role setup.
+There are no demo-role login buttons or default Director accounts.
+Replace the complete project, not only Login.tsx.
+The older README describes the original project and is not the login setup guide.
