@@ -62,12 +62,20 @@ function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatDueDate(value?: string) {
-  if (!value) return { month: "—", day: "—", full: "No deadline" };
+function dueKey(value: unknown) {
+  if (value instanceof Date) return localDateKey(value);
 
-  const date = new Date(`${value}T00:00:00`);
+  const text = String(value ?? "").trim();
+  return text ? text.slice(0, 10) : "";
+}
+
+function formatDueDate(value: unknown) {
+  const normalized = dueKey(value);
+  if (!normalized) return { month: "—", day: "—", full: "No deadline" };
+
+  const date = new Date(`${normalized}T00:00:00`);
   if (Number.isNaN(date.getTime())) {
-    return { month: "—", day: "—", full: value };
+    return { month: "—", day: "—", full: normalized };
   }
 
   return {
@@ -153,8 +161,11 @@ export default function Dashboard() {
   const completedTasks = tasks.filter((task) => task.status === "Completed");
   const activeTasks = tasks.filter((task) => task.status !== "Completed");
   const activeProjects = projects.filter((project) => project.status !== "Completed");
-  const overdueTasks = activeTasks.filter((task) => Boolean(task.due) && task.due < today);
-  const dueToday = activeTasks.filter((task) => task.due === today);
+  const overdueTasks = activeTasks.filter((task) => {
+    const due = dueKey(task.due);
+    return due !== "" && due < today;
+  });
+  const dueToday = activeTasks.filter((task) => dueKey(task.due) === today);
   const completionRate = Math.round(
     (completedTasks.length / Math.max(tasks.length, 1)) * 100,
   );
@@ -178,7 +189,7 @@ export default function Dashboard() {
         return {
           name: date.toLocaleString("en-IN", { month: "short" }),
           completed: completedTasks.filter(
-            (task) => task.due && String(task.due).slice(0, 7) === monthKey(date),
+            (task) => dueKey(task.due).slice(0, 7) === monthKey(date),
           ).length,
         };
       }),
@@ -190,9 +201,11 @@ export default function Dashboard() {
       activeTasks
         .slice()
         .sort((a, b) => {
-          if (!a.due) return 1;
-          if (!b.due) return -1;
-          return String(a.due).localeCompare(String(b.due));
+          const dueA = dueKey(a.due);
+          const dueB = dueKey(b.due);
+          if (!dueA) return 1;
+          if (!dueB) return -1;
+          return dueA.localeCompare(dueB);
         })
         .slice(0, 5),
     [activeTasks],
@@ -507,7 +520,7 @@ export default function Dashboard() {
                     <span className="min-w-0">
                       <strong className="block truncate text-xs font-extrabold text-slate-700">{project.name}</strong>
                       <small className="mt-1 block truncate text-[10px] text-slate-400">
-                        {client?.name || "Internal project"}{project.due ? ` · Due ${formatDueDate(project.due).full}` : ""}
+                        {client?.name || "Internal project"}{dueKey(project.due) ? ` · Due ${formatDueDate(project.due).full}` : ""}
                       </small>
                     </span>
                     <span className="hidden min-w-0 sm:block">
@@ -543,7 +556,8 @@ export default function Dashboard() {
               {upcomingTasks.map((task) => {
                 const due = formatDueDate(task.due);
                 const assignee = (data.employees || []).find((employee) => employee.id === task.assignee);
-                const isOverdue = Boolean(task.due) && task.due < today;
+                const taskDue = dueKey(task.due);
+                const isOverdue = taskDue !== "" && taskDue < today;
 
                 return (
                   <Link
